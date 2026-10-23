@@ -46,10 +46,10 @@ call npm.cmd --version
 if errorlevel 1 goto restart_required
 
 echo [3/4] Installing the official IMGTR SDK and CLI...
-call npm.cmd install -g --allow-scripts=sharp https://imgtr.xyz/sdk/js/imgtr-sdk-1.2.0.tgz
+call npm.cmd install -g --allow-scripts=sharp https://raw.githubusercontent.com/sedatyildiznet/imgtr/main/sdk/js/imgtr-sdk-1.2.0.tgz
 if errorlevel 1 (
   echo       Retrying with compatibility options...
-  call npm.cmd install -g https://imgtr.xyz/sdk/js/imgtr-sdk-1.2.0.tgz
+  call npm.cmd install -g https://raw.githubusercontent.com/sedatyildiznet/imgtr/main/sdk/js/imgtr-sdk-1.2.0.tgz
 )
 if errorlevel 1 goto failed_cli
 set "PATH=%APPDATA%\npm;%PATH%"
