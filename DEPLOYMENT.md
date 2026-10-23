@@ -18,7 +18,7 @@ In Settings > Secrets and variables > Actions > Secrets, add:
 In Settings > Secrets and variables > Actions > Variables, add:
 
 - `CPANEL_DEPLOY_DIR`: IMGTR document root relative to cPanel home, e.g. `public_html` or `imgtr.xyz`. Check cPanel > Domains before choosing.
-- `IMGTR_DEPLOY_ENABLED`: initially absent/false. Set to `true` only after the first manual production run is verified.
+- Automatic deployment is enabled for pushes to `main` after successful validation. Append `[skip-deploy]` to a commit message to opt out of publishing that commit.
 
 ## First deploy
 
@@ -27,7 +27,7 @@ In Settings > Secrets and variables > Actions > Variables, add:
 3. Run Actions > **Validate and deploy IMGTR** > **Run workflow** with `dry_run=true`.
 4. Check the log: must find the existing `index.php`, `assets/`, `includes/`, `.htaccess`, and `includes/config.php` in the selected root; it must only PREVIEW changes.
 5. Once confirmed, run again with `dry_run=false`. This overwrites *only* application code files, and does not delete remote files.
-6. Check the site. Set `IMGTR_DEPLOY_ENABLED=true` to enable auto-deploy on `main` pushes.
+6. Check the site. Future changes to `main` deploy automatically unless their commit message contains `[skip-deploy]`.
 
 ## Protected production paths
 
