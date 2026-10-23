@@ -15,11 +15,11 @@ test('service state is written and removed without storing credentials',async()=
   try{await writeSharexState({pid:123,port:43191,started_at:'test'},paths);assert.deepEqual(await readSharexState(paths),{pid:123,port:43191,started_at:'test'});assert.equal((await readFile(paths.state,'utf8')).includes('imgtr_'),false);await removeSharexState(paths);assert.equal(await readSharexState(paths),null)}finally{await rm(directory,{recursive:true,force:true})}
 });
 
-test('automatic startup installation creates a per-user hidden launcher',async()=>{
+test('automatic startup installation creates a per-user hidden launcher',{skip:process.platform!=='win32'},async()=>{
   const directory=await mkdtemp(join(tmpdir(),'imgtr-startup-')),paths={state:join(directory,'state.json'),startup:join(directory,'Startup','IMGTR ShareX Bridge.vbs')};
   try{const result=await installSharexStartup({port:43192,nodePath:'C:\\node.exe',scriptPath:'C:\\imgtr.js',paths,start:false});const launcher=await readFile(paths.startup,'utf8');assert.equal(result.port,43192);assert.equal(result.running,false);assert.match(launcher,/43192 --background/)}finally{await rm(directory,{recursive:true,force:true})}
 });
 
-test('service paths stay in the current user profile',()=>{
+test('service paths stay in the current user profile',{skip:process.platform!=='win32'},()=>{
   const paths=sharexServicePaths({LOCALAPPDATA:'C:\\Users\\A\\AppData\\Local',APPDATA:'C:\\Users\\A\\AppData\\Roaming'});assert.match(paths.state,/AppData\\Local\\IMGTR\\sharex-bridge\.json$/);assert.match(paths.startup,/AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup/);
 });
