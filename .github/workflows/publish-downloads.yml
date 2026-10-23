@@ -1,0 +1,57 @@
+name: Publish IMGTR download assets
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-downloads.yml'
+      - 'downloads/IMGTR-ShareX-Setup.bat'
+      - 'sdk/js/imgtr-sdk-1.2.0.tgz'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: imgtr-download-assets
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: ${{ github.repository == 'sedatyildiznet/imgtr' && github.ref == 'refs/heads/main' && github.actor == 'sedatyildiznet' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check packaged download assets
+        run: |
+          set -euo pipefail
+          test -s downloads/IMGTR-ShareX-Setup.bat
+          test -s sdk/js/imgtr-sdk-1.2.0.tgz
+          tar -tzf sdk/js/imgtr-sdk-1.2.0.tgz > /dev/null
+          grep -q 'imgtr.cmd sharex install' downloads/IMGTR-ShareX-Setup.bat
+      - name: Create or update stable GitHub Releases downloads
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag=downloads
+          bat='downloads/IMGTR-ShareX-Setup.bat'
+          sdk='sdk/js/imgtr-sdk-1.2.0.tgz'
+          if gh release view "$tag" --repo "$GH_REPO" > /dev/null 2>&1; then
+            gh release upload "$tag" "$bat" "$sdk" --clobber --repo "$GH_REPO"
+          else
+            gh release create "$tag" "$bat" "$sdk" \
+              --repo "$GH_REPO" \
+              --target "$GITHUB_SHA" \
+              --title 'IMGTR Official Downloads' \
+              --notes 'Official Windows ShareX setup and Node.js SDK package. Downloads are served as GitHub Release assets.' \
+              --latest=false
+          fi
+          gh release view "$tag" --json assets --jq '.assets[].name' --repo "$GH_REPO" | sort > /tmp/actual-assets
+          printf '%s\n' 'IMGTR-ShareX-Setup.bat' 'imgtr-sdk-1.2.0.tgz' > /tmp/expected-assets
+          diff -u /tmp/expected-assets /tmp/actual-assets
+          echo 'Release assets published and verified.'
