@@ -1,20 +1,29 @@
-# IMGTR source control
+# Runtime configuration and credentials
 /includes/config.php
+.env
+.env.*
+!.env.example
+*.sql
+*.sql.gz
+*.sqlite
+*.sqlite3
+
+# User-generated and runtime data
 /logs/
 /cache/
 /uploads/
 /downloads/
 /.well-known/
-/storage/
 /tmp/
 /temp/
+/storage/
 /sessions/
-.env
-.env.*
-*.sql
-*.sql.gz
-*.sqlite
-*.sqlite3
 *.log
 error_log
+
+# Tooling
+.git/
+.github/*.tmp
 **/node_modules/
+**/.DS_Store
+**/Thumbs.db

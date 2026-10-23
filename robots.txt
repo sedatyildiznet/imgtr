@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /ajax/
+Disallow: /api/
+Disallow: /cron/
+Disallow: /account/
+Disallow: /manage/
+Disallow: /dashboard
+Disallow: /logout
+Disallow: /*?tab=
+
+Sitemap: https://imgtr.xyz/sitemap.xml
