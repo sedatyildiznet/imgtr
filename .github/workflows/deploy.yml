@@ -34,7 +34,8 @@ jobs:
           set -euo pipefail
           test ! -e includes/config.php
           test ! -d uploads
-          test ! -d downloads
+          test -f downloads/IMGTR-ShareX-Setup.bat
+          test "$(find downloads -type f | wc -l)" -eq 1
           test ! -d logs
           test ! -d .well-known
           test -f index.php
@@ -112,3 +113,41 @@ jobs:
             DEPLOYMENT.md
             includes/config.example.php
             .imgtr-deploy-state.json
+
+      - name: Deploy only the restored ShareX installer
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run == true) }}
+        shell: bash
+        env:
+          FTP_HOST: ${{ secrets.IMGTR_FTP_HOST }}
+          FTP_USER: ${{ secrets.IMGTR_FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.IMGTR_FTP_PASSWORD }}
+          FTP_DIRECTORY: ${{ vars.IMGTR_FTP_SERVER_DIR || './' }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import os
+          import ssl
+          from ftplib import FTP_TLS, error_perm
+          from pathlib import Path
+
+          installer = Path("downloads/IMGTR-ShareX-Setup.bat").read_bytes()
+          with FTP_TLS(context=ssl.create_default_context(), timeout=30) as ftp:
+              ftp.connect(os.environ["FTP_HOST"], 21)
+              ftp.login(os.environ["FTP_USER"], os.environ["FTP_PASSWORD"])
+              ftp.prot_p()
+              ftp.cwd(os.environ["FTP_DIRECTORY"])
+              try:
+                  ftp.cwd("downloads")
+              except error_perm as exc:
+                  if not str(exc).startswith("550"):
+                      raise
+                  ftp.mkd("downloads")
+                  ftp.cwd("downloads")
+              with Path("downloads/IMGTR-ShareX-Setup.bat").open("rb") as file:
+                  ftp.storbinary("STOR IMGTR-ShareX-Setup.bat", file)
+              remote = bytearray()
+              ftp.retrbinary("RETR IMGTR-ShareX-Setup.bat", remote.extend)
+              if hashlib.sha256(installer).digest() != hashlib.sha256(remote).digest():
+                  raise RuntimeError("ShareX installer checksum mismatch after upload")
+              print("Verified ShareX installer in downloads/; other files untouched.")
+          PY
