@@ -12,7 +12,8 @@
 /logs/
 /cache/
 /uploads/
-/downloads/
+/downloads/*
+!/downloads/IMGTR-ShareX-Setup.bat
 /.well-known/
 /tmp/
 /temp/
