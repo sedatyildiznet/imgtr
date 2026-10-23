@@ -35,6 +35,8 @@ jobs:
           node-version: '22'
       - name: Verify SDK, ShareX integration and site references
         run: node --test sdk/js/tests/*.test.js
+      - name: Check cPanel deploy script syntax
+        run: python3 -m py_compile .github/scripts/cpanel_deploy.py
       - name: Ensure production-only data stays outside Git
         run: |
           set -euo pipefail
