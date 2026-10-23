@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS admin_audit_log (
   action VARCHAR(80) NOT NULL,
   target_type VARCHAR(40) NOT NULL,
   target_id VARCHAR(100) DEFAULT NULL,
-  details_json LONGTEXT DEFAULT NULL,
+  details_json LONGTEXT NULL,
   ip_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   user_agent VARCHAR(500) DEFAULT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
