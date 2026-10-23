@@ -38,7 +38,7 @@ page_start(t('sharex_page_title'),t('sharex_meta'),['schema'=>['@context'=>'http
 
   <section class="app-setup" id="setup"><header><p class="eyebrow"><?=e(t('sharex_setup_label'))?></p><h2><?=e(t('sharex_setup_title'))?></h2></header><div class="app-setup-steps">
     <article><b><?=e(t('sharex_step_install'))?></b><a href="https://getsharex.com/downloads" target="_blank" rel="noopener noreferrer"><?=e(t('sharex_download'))?> ↗</a></article>
-    <article><b><?=e(t('sharex_step_cli'))?></b><a class="button small" href="/downloads/IMGTR-ShareX-Setup.bat" download><?=e(t('sharex_download_setup'))?> ↓</a></article>
+    <article><b><?=e(t('sharex_step_cli'))?></b><a class="button small" href="https://raw.githubusercontent.com/sedatyildiznet/imgtr/main/downloads/IMGTR-ShareX-Setup.bat" target="_blank" rel="noopener noreferrer"><?=e(t('sharex_download_setup'))?> ↓</a></article>
     <article><b><?=e(t('sharex_step_bridge'))?></b><code>IMGTR-ShareX-Setup.bat</code></article>
     <article><b><?=e(t('sharex_step_config'))?></b><?php if($appUser):?><form method="post" action="/account/integrations/sharex/download"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><button class="text-button" type="submit"><?=e(t($sharexReady?'sharex_regenerate_config':'sharex_download_config'))?> ↓</button></form><?php else:?><a href="/login"><?=e(t('login'))?> →</a><?php endif?></article>
     <article><b><?=e(t('sharex_step_import'))?></b><code>IMGTR.sxcu</code></article>

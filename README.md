@@ -6,7 +6,7 @@
 
 A lightweight PHP image-publishing app that signs and distributes images across Nostr relays without permanently storing image binaries on the origin server.
 
-[**Website**](https://imgtr.xyz) · [**API**](https://imgtr.xyz/api) · [**JavaScript SDK**](sdk/js/README.md) · [**Türkçe**](README.tr.md)
+[**Website**](https://imgtr.xyz) · [**API**](https://imgtr.xyz/api) · [**JavaScript SDK**](sdk/js/README.md) · [**Windows Setup**](https://raw.githubusercontent.com/sedatyildiznet/imgtr/main/downloads/IMGTR-ShareX-Setup.bat) · [**Türkçe**](README.tr.md)
 
 ![PHP 8.1+](https://img.shields.io/badge/PHP-8.1%2B-777BB4)
 ![Nostr](https://img.shields.io/badge/Protocol-Nostr-6941C6)

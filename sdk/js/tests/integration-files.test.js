@@ -48,7 +48,9 @@ test('personalized ShareX config targets only the loopback bridge',async()=>{
 
 test('public App offers the automatic Windows setup without embedding credentials',async()=>{
   const page=await source('app.php'),setup=await source('downloads/IMGTR-ShareX-Setup.bat'),dashboard=await source('dashboard.php'),admin=await source('includes/admin-layout.php'),refinement=await source('assets/css/dashboard-refine.css');
-  assert.match(page,/\/downloads\/IMGTR-ShareX-Setup\.bat/);
+  assert.ok(page.includes('https://raw.githubusercontent.com/sedatyildiznet/imgtr/main/downloads/IMGTR-ShareX-Setup.bat'),'App must load Windows installer from GitHub');
+  assert.ok(dashboard.includes('https://raw.githubusercontent.com/sedatyildiznet/imgtr/main/downloads/IMGTR-ShareX-Setup.bat'),'Dashboard must link GitHub-hosted Windows setup');
+  assert.ok(setup.includes('https://raw.githubusercontent.com/sedatyildiznet/imgtr/main/sdk/js/imgtr-sdk-1.2.0.tgz'),'Windows installer must install GitHub-hosted SDK');
   assert.match(setup,/OpenJS\.NodeJS\.LTS/);
   assert.match(setup,/imgtr\.cmd sharex install/);
   assert.match(setup,/imgtr-sdk-1\.2\.0\.tgz/);
@@ -145,6 +147,17 @@ test('album refinement translations have identical keys in every language',async
     assert.equal(new Set(keys[language]).size,keys[language].length,`${language} contains duplicate album keys`);
   }
   for(const language of languages)assert.deepEqual([...keys[language]].sort(),[...keys.en].sort(),`${language} album key set differs from English`);
+});
+
+test('site links GitHub open-source repository and offers GitHub-hosted SDK downloads',async()=>{
+  const footer=await source('includes/layout.php'),docs=await source('api-docs.php'),sdkReadme=await source('sdk/js/README.md'),app=await source('app.php'),dashboard=await source('dashboard.php');
+  assert.match(footer,/href="https:\/\/github\.com\/sedatyildiznet\/imgtr"/);
+  assert.ok(docs.includes('https://raw.githubusercontent.com/sedatyildiznet/imgtr/main/sdk/js/imgtr-sdk-1.2.0.tgz'));
+  assert.ok(sdkReadme.includes('https://raw.githubusercontent.com/sedatyildiznet/imgtr/main/sdk/js/imgtr-sdk-1.2.0.tgz'));
+  for(const page of [app,dashboard]){
+    assert.ok(page.includes('https://raw.githubusercontent.com/sedatyildiznet/imgtr/main/downloads/IMGTR-ShareX-Setup.bat'));
+    assert.ok(!page.includes('href="/downloads/IMGTR-ShareX-Setup.bat"'),'Windows setup must not use origin');
+  }
 });
 
 test('homepage, dashboard and admin render the same shared footer',async()=>{
