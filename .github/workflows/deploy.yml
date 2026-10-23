@@ -66,6 +66,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Verify production HTTP health Preflight upload
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
+        run: |
+          set -euo pipefail
+          for path in / /status; do
+            curl --fail --silent --show-error --location --connect-timeout 10 --max-time 30 "https://imgtr.xyz${path}" > /dev/null
+            echo "Preflight health check OK: ${path}"
+          done
       - name: cPanel HTTPS API deployment
         env:
           CPANEL_HOST: ${{ secrets.CPANEL_HOST }}
@@ -80,3 +88,11 @@ jobs:
             exit 1
           }
           python3 .github/scripts/cpanel_deploy.py
+      - name: Verify production HTTP health Post-deploy upload
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
+        run: |
+          set -euo pipefail
+          for path in / /status; do
+            curl --fail --silent --show-error --location --connect-timeout 10 --max-time 30 "https://imgtr.xyz${path}" > /dev/null
+            echo "Post-deploy health check OK: ${path}"
+          done
