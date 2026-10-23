@@ -28,3 +28,15 @@ error_log
 **/node_modules/
 **/.DS_Store
 **/Thumbs.db
+
+# Additional local secrets and backup artifacts
+*.pem
+*.key
+*.p12
+*.pfx
+*.bak
+*.backup
+*.orig
+*.swp
+*~
+/config.php

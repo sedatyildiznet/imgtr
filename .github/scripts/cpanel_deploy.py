@@ -51,7 +51,7 @@ def get_git_paths() -> list[str]:
     raw = subprocess.check_output(["git", "ls-files", "-z"])
     return sorted(
         p for p in raw.decode("utf-8").split("\0")
-        if p and safe_path(p) and (ROOT / p).is_file()
+        if p and safe_path(p) and (ROOT / p).is_file() and not (ROOT / p).is_symlink()
     )
 
 
