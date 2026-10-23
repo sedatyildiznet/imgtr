@@ -37,6 +37,11 @@ jobs:
         run: node --test sdk/js/tests/*.test.js
       - name: Verify public-source safety checks
         run: python3 .github/scripts/check_public_tree.py
+      - name: Test security regression cases
+        run: |
+          php tests/security-regressions.php
+          test -f includes/.htaccess
+          test -f cron/.htaccess
       - name: Check cPanel deploy script syntax
         run: python3 -m py_compile .github/scripts/cpanel_deploy.py
       - name: Ensure production-only data stays outside Git
