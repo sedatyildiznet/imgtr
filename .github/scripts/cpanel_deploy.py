@@ -90,6 +90,8 @@ def request(path: str, *, fields: dict[str, str] | None = None, upload: tuple[st
              'Content-Disposition: form-data; name="dir"\r\n\r\n'
              + fields["dir"] + "\r\n"
              + "--" + boundary + "\r\n"
+             'Content-Disposition: form-data; name="overwrite"\r\n\r\n1\r\n'
+             + "--" + boundary + "\r\n"
              'Content-Disposition: form-data; name="file-1"; filename="' + filename + '"\r\n'
              'Content-Type: application/octet-stream\r\n\r\n').encode("utf-8")
             + payload + ("\r\n--" + boundary + "--\r\n").encode("ascii")
@@ -115,7 +117,12 @@ def request(path: str, *, fields: dict[str, str] | None = None, upload: tuple[st
             raise RuntimeError("cPanel API2 operation failed: " + str(result.get("error") or result.get("data", []))[:200])
         return obj
     if int(obj.get("status", 0)) != 1 or obj.get("errors"):
-        raise RuntimeError("cPanel UAPI operation failed: " + str(obj.get("errors") or obj.get("messages"))[:200])
+        details = obj.get("data")
+        raise RuntimeError(
+            "cPanel UAPI operation failed: "
+            + str(obj.get("errors") or obj.get("messages"))[:200]
+            + " | file details: " + json.dumps(details, ensure_ascii=False, default=str)[:500]
+        )
     return obj
 
 
