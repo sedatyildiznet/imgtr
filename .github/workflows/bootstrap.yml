@@ -24,7 +24,7 @@ jobs:
             echo "No import archive present; skipping."
             exit 0
           fi
-          unzip -q .bootstrap/imgtr-source.zip -d .
+          unzip -oq .bootstrap/imgtr-source.zip -d .
           test -f index.php
           test -f .github/workflows/deploy.yml
           test ! -e includes/config.php
