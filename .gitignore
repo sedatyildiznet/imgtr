@@ -1,0 +1,20 @@
+# IMGTR source control
+/includes/config.php
+/logs/
+/cache/
+/uploads/
+/downloads/
+/.well-known/
+/storage/
+/tmp/
+/temp/
+/sessions/
+.env
+.env.*
+*.sql
+*.sql.gz
+*.sqlite
+*.sqlite3
+*.log
+error_log
+**/node_modules/
