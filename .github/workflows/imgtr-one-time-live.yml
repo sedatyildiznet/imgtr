@@ -1,4 +1,5 @@
 name: One-time production deploy IMGTR
+# Retry 2: multipart overwrite enabled and detailed API errors
 on:
   push:
     branches: [main]
