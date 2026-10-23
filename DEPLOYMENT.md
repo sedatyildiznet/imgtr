@@ -1,27 +1,41 @@
-# IMGTR deployment
+# IMGTR — cPanel API Token deployment
 
-This repository contains only application source. The production `includes/config.php`, MySQL database, and server-generated content must remain on the hosting account.
+GitHub Actions deploys application files over **HTTPS 2083**, with cPanel API Tokens.
+There is no SSH or FTP dependency.
 
-## Repository secrets (Settings > Secrets and variables > Actions)
+## GitHub Repository Secrets
 
-- `IMGTR_FTP_HOST`: FTPS hostname (must match TLS certificate)
-- `IMGTR_FTP_USER`: FTP login (prefer cPanel FTP account restricted to imgtr.xyz document root)
-- `IMGTR_FTP_PASSWORD`: FTP password
+In Settings > Secrets and variables > Actions > Secrets, add:
 
-## Repository variables
+- `CPANEL_HOST`: cPanel *server hostname*, for example `server.example.net`, without `https://`, port, or path; the hostname must have a trusted TLS certificate
+- `CPANEL_USERNAME`: the cPanel account login (not the FTP username)
+- `CPANEL_API_TOKEN`: create in cPanel > Security > Manage API Tokens (name: `imgtr-github`)
 
-- `IMGTR_FTP_SERVER_DIR`: FTP-relative website root, normally `./` for an FTP subaccount scoped to the document root. Include trailing `/`.
-- `IMGTR_DEPLOY_ENABLED`: Set `true` **only after dry-run verification**.
+**Do not send the token in chat or commit it.**
 
-## First deployment
+## Repository Variables
 
-1. Ensure the production installation's `includes/config.php` and any server-generated files are backed up.
-2. Run `Actions > Validate and deploy IMGTR > Run workflow` with `dry_run = true`. Review remote directory, proposed changes and the FTPS TLS handshake.
-3. If correct, run again with `dry_run = false` (manual first deployment).
-4. After verifying imgtr.xyz, set `IMGTR_DEPLOY_ENABLED = true`. Subsequent pushes to main automatically deploy.
+In Settings > Secrets and variables > Actions > Variables, add:
 
-Never commit runtime config, credentials, database dumps, private data, or user content.
+- `CPANEL_DEPLOY_DIR`: IMGTR document root relative to cPanel home, e.g. `public_html` or `imgtr.xyz`. Check cPanel > Domains before choosing.
+- `IMGTR_DEPLOY_ENABLED`: initially absent/false. Set to `true` only after the first manual production run is verified.
 
-## ShareX installer
+## First deploy
 
-`downloads/IMGTR-ShareX-Setup.bat` is versioned in Git, but the main FTPS sync excludes the entire `downloads/` directory to protect production content. A separate FTPS step uploads and SHA-256-verifies **only** that `.bat` file on real deploys. Manual dry runs skip all uploads, including the `.bat` file. No other contents of `downloads/` are touched.
+1. Create a full website + database backup on cPanel.
+2. Set three GitHub Secrets and `CPANEL_DEPLOY_DIR`.
+3. Run Actions > **Validate and deploy IMGTR** > **Run workflow** with `dry_run=true`.
+4. Check the log: must find the existing `index.php`, `assets/`, `includes/`, `.htaccess`, and `includes/config.php` in the selected root; it must only PREVIEW changes.
+5. Once confirmed, run again with `dry_run=false`. This overwrites *only* application code files, and does not delete remote files.
+6. Check the site. Set `IMGTR_DEPLOY_ENABLED=true` to enable auto-deploy on `main` pushes.
+
+## Protected production paths
+
+The deployment explicitly excludes `.htaccess`, `includes/config.php`, `downloads/`, `uploads/`, `logs/`, `cache/`, `storage/`, `sessions/`, `.well-known/`, `updates/`, SQL dumps, project secrets, and GitHub workflow files.
+
+No database migrations or deletions are performed automatically.
+The ShareX BAT file is **not** deployed by this workflow.
+
+GitHub Actions uses UAPI `Fileman::list_files` (read-only check) and `Fileman::upload_files` for files. If a source-code directory is missing, it uses cPanel API 2 `Fileman::mkdir`. Your hosting provider must allow these API functions over TLS port 2083.
+
+For push-triggered runs, the script selects changed tracked files; manual deploys preview/upload all eligible application files.
