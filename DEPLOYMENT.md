@@ -21,3 +21,7 @@ This repository contains only application source. The production `includes/confi
 4. After verifying imgtr.xyz, set `IMGTR_DEPLOY_ENABLED = true`. Subsequent pushes to main automatically deploy.
 
 Never commit runtime config, credentials, database dumps, private data, or user content.
+
+## ShareX installer
+
+`downloads/IMGTR-ShareX-Setup.bat` is versioned in Git, but the main FTPS sync excludes the entire `downloads/` directory to protect production content. A separate FTPS step uploads and SHA-256-verifies **only** that `.bat` file on real deploys. Manual dry runs skip all uploads, including the `.bat` file. No other contents of `downloads/` are touched.
