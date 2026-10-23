@@ -28,7 +28,7 @@ function active_user_ban(int $userId): ?array {
 function create_user_ban(int $userId,string $reason,?string $expiresAt,int $adminId): int {
     if(!control_tables_available())throw new RuntimeException('Admin control SQL update is required.');
     db()->prepare('UPDATE user_bans SET active=0,revoked_by=?,revoked_at=UTC_TIMESTAMP() WHERE user_id=? AND active=1')->execute([$adminId,$userId]);
-    $query=db()->prepare('INSERT INTO user_bans(user_id,reason,expires_at,created_by) VALUES(?,?,?,?)');
+    $query=db()->prepare('INSERT INTO user_bans(user_id,reason,starts_at,expires_at,created_by) VALUES(?,?,UTC_TIMESTAMP(),?,?)');
     $query->execute([$userId,$reason,$expiresAt,$adminId]);
     return (int)db()->lastInsertId();
 }
