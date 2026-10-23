@@ -5,8 +5,8 @@ The SDK processes the image locally, removes metadata from JPG/PNG/WEBP by decod
 ## Install
 
 ```bash
-npm install https://raw.githubusercontent.com/sedatyildiznet/imgtr/main/sdk/js/imgtr-sdk-1.2.0.tgz
-npm install -g https://raw.githubusercontent.com/sedatyildiznet/imgtr/main/sdk/js/imgtr-sdk-1.2.0.tgz
+npm install https://github.com/sedatyildiznet/imgtr/releases/download/downloads/imgtr-sdk-1.2.0.tgz
+npm install -g https://github.com/sedatyildiznet/imgtr/releases/download/downloads/imgtr-sdk-1.2.0.tgz
 imgtr config set-key imgtr_your_key
 ```
 
