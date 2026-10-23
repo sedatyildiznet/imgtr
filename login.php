@@ -14,6 +14,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     if((int)$window['hits']>=8) throw new RuntimeException(t('too_many_login'));
     $email=strtolower(trim($_POST['email']??'')); $password=$_POST['password']??'';
     if(!filter_var($email,FILTER_VALIDATE_EMAIL)) throw new RuntimeException(t('invalid_email'));
+    rate_limit('login-ip',25);
+    rate_limit('login-account-'.hash('sha256',$email),8,false);
     $stmt=db()->prepare('SELECT * FROM users WHERE email=? LIMIT 1'); $stmt->execute([$email]); $user=$stmt->fetch();
     if(!$user||!password_verify($password,$user['password_hash'])||(($user['status']??'active')!=='active')) {
       record_auth_activity('login_failed',null,$email);$window['hits']++; $_SESSION['login_window']=$window; throw new RuntimeException(t('invalid_login'));

@@ -12,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     if((int)$window['hits']>=5) throw new RuntimeException(t('too_many_register'));
     $email=strtolower(trim($_POST['email']??'')); $password=$_POST['password']??'';
     if(!filter_var($email,FILTER_VALIDATE_EMAIL)) throw new RuntimeException(t('invalid_email'));
+    rate_limit('register-ip',8);
     if(strlen($password)<10) throw new RuntimeException(t('password_short'));
     $exists=db()->prepare('SELECT id FROM users WHERE email=? LIMIT 1'); $exists->execute([$email]);
     if($exists->fetchColumn()) throw new RuntimeException(t('email_exists'));

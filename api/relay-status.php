@@ -5,13 +5,18 @@ require_once __DIR__.'/../includes/deletion.php';
 secure_session();
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['success'=>false],405);
 verify_csrf();
-$value=json_decode(file_get_contents('php://input'),true);
+rate_limit('relay-verify-ip',90);
+$raw=file_get_contents('php://input',false,null,0,1048577);
+if($raw===false||strlen($raw)>1048576)json_response(['success'=>false,'message'=>'Relay verification data is too large.'],413);
+$value=json_decode($raw,true);
+if(!is_array($value)||!is_array($value['relays']??null)||count($value['relays'])>RELAY_TARGET)json_response(['success'=>false,'message'=>'Invalid relay verification data.'],422);
 $stmt=db()->prepare('SELECT id,short_id,chunk_count,status,sha256,size,manage_token_hash FROM images WHERE short_id=?');
 $stmt->execute([$value['id']??'']);
 $image=$stmt->fetch();
 if(!$image)json_response(['success'=>false,'message'=>'Image not found.'],404);
 $token=$value['verification_token']??'';
 if(!is_string($token)||!preg_match('/^[a-f0-9]{64}$/',$token)||!hash_equals($image['manage_token_hash'],hash('sha256',$token)))json_response(['success'=>false,'message'=>'Upload verification token is invalid.'],403);
+rate_limit('relay-verify-image-'.(int)$image['id'],24,false);
 if(!in_array($image['status'],['pending','ready'],true))json_response(['success'=>false,'message'=>'Image is not available for verification.'],409);
 $storedStmt=db()->prepare('SELECT relay_id FROM image_relays WHERE image_id=? AND status="stored"');
 $storedStmt->execute([$image['id']]);
@@ -24,7 +29,9 @@ $save=db()->prepare('INSERT INTO image_relays(image_id,relay_id,manifest_event_i
 $relayLookup=db()->prepare('SELECT url FROM relays WHERE id=? AND enabled=1 AND write_allowed=1');
 $seen=[];$seenUrls=[];
 $verificationTimeout=min(18,max(6,(int)ceil((int)$image['size']/1048576)*2));
-foreach(array_slice($value['relays']??[],0,RELAY_TARGET) as $reported){
+$verifyDeadline=microtime(true)+60;
+foreach($value['relays'] as $reported){
+  if(!is_array($reported)||microtime(true)>=$verifyDeadline)break;
   if($image['status']==='pending'&&$stored>=RELAY_MINIMUM)break;
   $relayId=(int)($reported['relay_id']??0);
   if($relayId<1||isset($seen[$relayId]))continue;
@@ -42,8 +49,10 @@ foreach(array_slice($value['relays']??[],0,RELAY_TARGET) as $reported){
     $ids=array_merge([$manifest],$chunks);
     $events=[];
     foreach([0,250000,750000] as $delay){
+      if(microtime(true)>=$verifyDeadline-1)break;
       if($delay)usleep($delay);
-      $events+=relay_fetch_events($url,array_values(array_diff($ids,array_keys($events))),$verificationTimeout);
+      $budget=max(1,min($verificationTimeout,(int)ceil($verifyDeadline-microtime(true))));
+      $events+=relay_fetch_events($url,array_values(array_diff($ids,array_keys($events))),$budget);
       if(count($events)===count($ids))break;
     }
     $verified=count($events)===count($ids)&&relay_image_events_valid($events,$manifest,$chunks,$image,$chunkHashes);
