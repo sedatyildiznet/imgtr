@@ -48,112 +48,26 @@ jobs:
           test -f .htaccess
 
   deploy:
+    name: Preview or deploy via cPanel API Token
     needs: validate
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && vars.IMGTR_DEPLOY_ENABLED == 'true') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - name: Require FTPS credentials
-        shell: bash
+        with:
+          fetch-depth: 0
+      - name: cPanel HTTPS API deployment
         env:
-          FTP_HOST: ${{ secrets.IMGTR_FTP_HOST }}
-          FTP_USER: ${{ secrets.IMGTR_FTP_USER }}
-          FTP_PASSWORD: ${{ secrets.IMGTR_FTP_PASSWORD }}
+          CPANEL_HOST: ${{ secrets.CPANEL_HOST }}
+          CPANEL_USERNAME: ${{ secrets.CPANEL_USERNAME }}
+          CPANEL_API_TOKEN: ${{ secrets.CPANEL_API_TOKEN }}
+          CPANEL_DEPLOY_DIR: ${{ vars.CPANEL_DEPLOY_DIR }}
+          GIT_BASE_SHA: ${{ github.event_name == 'push' && github.event.before || '' }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true && '1' || '0' }}
         run: |
-          set -euo pipefail
-          test -n "$FTP_HOST" && test -n "$FTP_USER" && test -n "$FTP_PASSWORD" || {
-            echo '::error::Set IMGTR_FTP_HOST, IMGTR_FTP_USER and IMGTR_FTP_PASSWORD repository secrets'
+          test -n "$CPANEL_HOST" && test -n "$CPANEL_USERNAME" && test -n "$CPANEL_API_TOKEN" && test -n "$CPANEL_DEPLOY_DIR" || {
+            echo "::error::Set CPANEL_HOST, CPANEL_USERNAME, CPANEL_API_TOKEN secrets and CPANEL_DEPLOY_DIR variable"
             exit 1
           }
-      - name: Publish changed website files over FTPS
-        uses: SamKirkland/FTP-Deploy-Action@110f9186c050f71550953127052e77650219c287 # v4.4.0
-        with:
-          server: ${{ secrets.IMGTR_FTP_HOST }}
-          username: ${{ secrets.IMGTR_FTP_USER }}
-          password: ${{ secrets.IMGTR_FTP_PASSWORD }}
-          port: 21
-          protocol: ftps
-          security: strict
-          local-dir: ./
-          server-dir: ${{ vars.IMGTR_FTP_SERVER_DIR || './' }}
-          state-name: .imgtr-deploy-state.json
-          dangerous-clean-slate: false
-          dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/.github/**
-            **/node_modules/**
-            **/.DS_Store
-            .ftpquota
-            .env
-            .env.*
-            **/.env
-            **/.env.*
-            includes/config.php
-            **/includes/config.php
-            logs/**
-            **/logs/**
-            cache/**
-            **/cache/**
-            uploads/**
-            **/uploads/**
-            downloads/**
-            **/downloads/**
-            .well-known/**
-            **/.well-known/**
-            tmp/**
-            **/tmp/**
-            temp/**
-            **/temp/**
-            storage/**
-            **/storage/**
-            sessions/**
-            **/sessions/**
-            **/*.sql
-            **/*.sql.gz
-            **/*.sqlite
-            **/*.log
-            **/error_log
-            README.md
-            DEPLOYMENT.md
-            includes/config.example.php
-            .imgtr-deploy-state.json
-
-      - name: Deploy only the restored ShareX installer
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run == true) }}
-        shell: bash
-        env:
-          FTP_HOST: ${{ secrets.IMGTR_FTP_HOST }}
-          FTP_USER: ${{ secrets.IMGTR_FTP_USER }}
-          FTP_PASSWORD: ${{ secrets.IMGTR_FTP_PASSWORD }}
-          FTP_DIRECTORY: ${{ vars.IMGTR_FTP_SERVER_DIR || './' }}
-        run: |
-          python3 - <<'PY'
-          import hashlib
-          import os
-          import ssl
-          from ftplib import FTP_TLS, error_perm
-          from pathlib import Path
-
-          installer = Path("downloads/IMGTR-ShareX-Setup.bat").read_bytes()
-          with FTP_TLS(context=ssl.create_default_context(), timeout=30) as ftp:
-              ftp.connect(os.environ["FTP_HOST"], 21)
-              ftp.login(os.environ["FTP_USER"], os.environ["FTP_PASSWORD"])
-              ftp.prot_p()
-              ftp.cwd(os.environ["FTP_DIRECTORY"])
-              try:
-                  ftp.cwd("downloads")
-              except error_perm as exc:
-                  if not str(exc).startswith("550"):
-                      raise
-                  ftp.mkd("downloads")
-                  ftp.cwd("downloads")
-              with Path("downloads/IMGTR-ShareX-Setup.bat").open("rb") as file:
-                  ftp.storbinary("STOR IMGTR-ShareX-Setup.bat", file)
-              remote = bytearray()
-              ftp.retrbinary("RETR IMGTR-ShareX-Setup.bat", remote.extend)
-              if hashlib.sha256(installer).digest() != hashlib.sha256(remote).digest():
-                  raise RuntimeError("ShareX installer checksum mismatch after upload")
-              print("Verified ShareX installer in downloads/; other files untouched.")
-          PY
+          python3 .github/scripts/cpanel_deploy.py
