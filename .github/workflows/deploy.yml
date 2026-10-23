@@ -1,0 +1,77 @@
+name: Validate and deploy IMGTR
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview changes without uploading or deleting files'
+        type: boolean
+        required: true
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: imgtr-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PHP syntax
+        run: |
+          set -euo pipefail
+          find . -type f -name '*.php' -not -path './.git/*' -print0 | xargs -0 -r -n1 php -l
+      - name: Set up Node.js for SDK checks
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify SDK, ShareX integration and site references
+        run: node --test sdk/js/tests/*.test.js
+      - name: Verify public-source safety checks
+        run: python3 .github/scripts/check_public_tree.py
+      - name: Check cPanel deploy script syntax
+        run: python3 -m py_compile .github/scripts/cpanel_deploy.py
+      - name: Ensure production-only data stays outside Git
+        run: |
+          set -euo pipefail
+          test ! -e includes/config.php
+          test ! -d uploads
+          test -f downloads/IMGTR-ShareX-Setup.bat
+          test "$(find downloads -type f | wc -l)" -eq 1
+          test ! -d logs
+          test ! -d .well-known
+          test -f index.php
+          test -f .htaccess
+
+  deploy:
+    name: Preview or deploy via cPanel API Token
+    needs: validate
+    if: ${{ github.repository == 'sedatyildiznet/imgtr' && github.actor == 'sedatyildiznet' && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip-deploy]'))) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: cPanel HTTPS API deployment
+        env:
+          CPANEL_HOST: ${{ secrets.CPANEL_HOST }}
+          CPANEL_USERNAME: ${{ secrets.CPANEL_USERNAME }}
+          CPANEL_API_TOKEN: ${{ secrets.CPANEL_API_TOKEN }}
+          CPANEL_DEPLOY_DIR: ${{ vars.CPANEL_DEPLOY_DIR }}
+          GIT_BASE_SHA: ${{ github.event_name == 'push' && github.event.before || '' }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true && '1' || '0' }}
+        run: |
+          test -n "$CPANEL_HOST" && test -n "$CPANEL_USERNAME" && test -n "$CPANEL_API_TOKEN" && test -n "$CPANEL_DEPLOY_DIR" || {
+            echo "::error::Set CPANEL_HOST, CPANEL_USERNAME, CPANEL_API_TOKEN secrets and CPANEL_DEPLOY_DIR variable"
+            exit 1
+          }
+          python3 .github/scripts/cpanel_deploy.py

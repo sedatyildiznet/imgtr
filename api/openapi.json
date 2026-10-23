@@ -1,0 +1,39 @@
+{
+  "openapi": "3.1.0",
+  "info": {"title": "IMGTR API", "version": "1.0.0", "description": "Account, image management and zero-origin-storage upload coordination API. Image bytes are published directly to Nostr relays by the official SDK/CLI."},
+  "servers": [{"url": "https://imgtr.xyz/api/v1"}],
+  "security": [{"bearerAuth": []}],
+  "paths": {
+    "/": {"get": {"summary": "API discovery", "security": [], "responses": {"200": {"description": "API information"}}}},
+    "/user": {"get": {"summary": "Current API user", "responses": {"200": {"description": "User profile"}, "401": {"$ref": "#/components/responses/Unauthorized"}}}},
+    "/images": {"get": {"summary": "List images", "parameters": [{"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 25}}, {"name": "cursor", "in": "query", "schema": {"type": "string"}}], "responses": {"200": {"description": "Cursor-paginated images"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "422": {"$ref": "#/components/responses/Validation"}}}},
+    "/image": {
+      "get": {"summary": "Get an image", "parameters": [{"$ref": "#/components/parameters/ImageId"}], "responses": {"200": {"description": "Image"}, "404": {"$ref": "#/components/responses/NotFound"}}},
+      "delete": {"summary": "Delete an image and dispatch its signed NIP-09 request", "parameters": [{"$ref": "#/components/parameters/ImageId"}], "responses": {"200": {"description": "Local deletion and relay deletion state"}, "404": {"$ref": "#/components/responses/NotFound"}}}
+    },
+    "/deletion": {
+      "get": {"summary": "Get relay deletion status", "parameters": [{"$ref": "#/components/parameters/ImageId"}], "responses": {"200": {"description": "Relay acknowledgements and retry state"}, "409": {"description": "Image has not been deleted"}}},
+      "post": {"summary": "Retry pending relay deletion requests", "parameters": [{"$ref": "#/components/parameters/ImageId"}], "responses": {"200": {"description": "Updated relay deletion state"}, "409": {"description": "Image has not been deleted"}}}
+    },
+    "/relays": {"get": {"summary": "List writable relays", "responses": {"200": {"description": "Current relay targets and quorum"}}}},
+    "/uploads": {"post": {"summary": "Initiate a distributed upload", "description": "Accepts metadata and chunk hashes only. No image bytes are accepted by the origin.", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UploadRequest"}}}}, "responses": {"200": {"description": "Upload id, relay targets and verification token"}, "422": {"$ref": "#/components/responses/Validation"}, "503": {"description": "Insufficient writable relays"}}}},
+    "/uploads-verify": {"post": {"summary": "Verify published relay events", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/VerifyRequest"}}}}, "responses": {"200": {"description": "Verified replica count"}, "403": {"description": "Invalid verification token"}, "422": {"description": "Relay quorum was not verified"}}}}
+  },
+  "components": {
+    "securitySchemes": {"bearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "imgtr_ API key"}},
+    "parameters": {"ImageId": {"name": "id", "in": "query", "required": true, "schema": {"type": "string", "example": "Ab12Cd"}}},
+    "responses": {
+      "Unauthorized": {"description": "Missing, invalid or revoked API key", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+      "Validation": {"description": "Validation failed", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+      "NotFound": {"description": "Resource not found", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}}
+    },
+    "schemas": {
+      "Success": {"type": "object", "required": ["success", "data", "request_id"], "properties": {"success": {"const": true}, "data": {"type": "object"}, "meta": {"type": "object"}, "request_id": {"type": "string"}}},
+      "Error": {"type": "object", "required": ["success", "error", "request_id"], "properties": {"success": {"const": false}, "error": {"type": "object", "required": ["code", "message"], "properties": {"code": {"type": "string"}, "message": {"type": "string"}, "details": {"type": "object"}}}, "request_id": {"type": "string"}}},
+      "UploadRequest": {"type": "object", "required": ["filename", "mime", "size", "width", "height", "sha256", "chunks"], "properties": {"filename": {"type": "string", "maxLength": 255}, "mime": {"enum": ["image/jpeg", "image/png", "image/webp", "image/gif"]}, "size": {"type": "integer", "minimum": 1, "maximum": 10485760}, "width": {"type": "integer", "minimum": 1}, "height": {"type": "integer", "minimum": 1}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "chunks": {"type": "array", "minItems": 1, "maxItems": 1000, "items": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}},
+      "RelayPublication": {"type": "object", "required": ["relay_id", "ok", "manifest_event_id", "chunk_event_ids", "deletion_events"], "properties": {"relay_id": {"type": "integer"}, "ok": {"type": "boolean"}, "manifest_event_id": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "chunk_event_ids": {"type": "array", "items": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}, "deletion_events": {"type": "array", "description": "Uploader-signed batched NIP-09 requests retained for future deletion", "items": {"type": "object"}}}},
+      "RelayDeletion": {"type": "object", "required": ["status", "acknowledged", "targets"], "properties": {"status": {"enum": ["prepared", "pending", "partial", "complete", "legacy_unavailable", "schema_required"]}, "acknowledged": {"type": "integer"}, "targets": {"type": "integer"}, "attempts": {"type": "integer"}, "last_error": {"type": ["string", "null"]}}},
+      "VerifyRequest": {"type": "object", "required": ["id", "verification_token", "relays"], "properties": {"id": {"type": "string"}, "verification_token": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "relays": {"type": "array", "items": {"$ref": "#/components/schemas/RelayPublication"}}}}
+    }
+  }
+}

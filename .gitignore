@@ -1,0 +1,42 @@
+# Runtime configuration and credentials
+/includes/config.php
+.env
+.env.*
+!.env.example
+*.sql
+*.sql.gz
+*.sqlite
+*.sqlite3
+
+# User-generated and runtime data
+/logs/
+/cache/
+/uploads/
+/downloads/*
+!/downloads/IMGTR-ShareX-Setup.bat
+/.well-known/
+/tmp/
+/temp/
+/storage/
+/sessions/
+*.log
+error_log
+
+# Tooling
+.git/
+.github/*.tmp
+**/node_modules/
+**/.DS_Store
+**/Thumbs.db
+
+# Additional local secrets and backup artifacts
+*.pem
+*.key
+*.p12
+*.pfx
+*.bak
+*.backup
+*.orig
+*.swp
+*~
+/config.php

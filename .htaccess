@@ -1,0 +1,105 @@
+Options -Indexes
+
+RewriteEngine On
+
+# ---------------------------------------------------------
+# Canonical domain: www.imgtr.xyz -> imgtr.xyz
+# ---------------------------------------------------------
+RewriteCond %{HTTP_HOST} ^www\.imgtr\.xyz$ [NC]
+RewriteRule ^ https://imgtr.xyz%{REQUEST_URI} [R=301,L,NE]
+
+ErrorDocument 404 /404
+
+RewriteRule ^(?:updates|logs)/ - [F,L]
+
+<Files "IMGTR-ShareX-Setup.bat">
+  ForceType application/octet-stream
+  <IfModule mod_headers.c>
+    Header set Content-Disposition "attachment; filename=IMGTR-ShareX-Setup.bat"
+    Header set X-Content-Type-Options "nosniff"
+  </IfModule>
+</Files>
+
+# ---------------------------------------------------------
+# Canonical browser URLs:
+# Keep legacy PHP addresses working, but never expose them.
+# ---------------------------------------------------------
+
+RewriteCond %{THE_REQUEST} \s/+index\.php(?:[?\s]) [NC]
+RewriteRule ^index\.php$ / [R=301,L,NE]
+
+RewriteCond %{THE_REQUEST} \s/+app\.php(?:[?\s]) [NC]
+RewriteRule ^app\.php$ /app [R=301,L,NE]
+
+RewriteCond %{THE_REQUEST} \s/+api-docs\.php(?:[?\s]) [NC]
+RewriteRule ^api-docs\.php$ /api [R=301,L,NE]
+
+RewriteCond %{THE_REQUEST} \s/+(?:faq|status|privacy|terms|report|login|register|logout|dashboard)\.php(?:[?\s]) [NC]
+RewriteRule ^(faq|status|privacy|terms|report|login|register|logout|dashboard)\.php$ /$1 [R=301,L,NE]
+
+RewriteCond %{THE_REQUEST} \s/+admin/index\.php(?:[?\s]) [NC]
+RewriteRule ^admin/index\.php$ /admin/ [R=301,L,NE]
+
+RewriteCond %{THE_REQUEST} \s/+admin/(?:images|users|relays|reports|activity|settings)\.php(?:[?\s]) [NC]
+RewriteRule ^admin/(images|users|relays|reports|activity|settings)\.php$ /admin/$1 [R=301,L,NE]
+
+# ---------------------------------------------------------
+# Clean URL routing
+# ---------------------------------------------------------
+
+RewriteRule ^app/?$ app.php [L,QSA]
+RewriteRule ^api/?$ api-docs.php [L,QSA]
+
+RewriteRule ^(faq|status|privacy|terms|report|login|register|logout|dashboard|404)/?$ $1.php [L,QSA]
+
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+
+RewriteRule ^account/integrations/sharex/download/?$ sharex-config.php [L,QSA]
+
+RewriteRule ^admin/(images|users|relays|reports|activity|settings)/?$ admin/$1.php [L,QSA]
+
+# ---------------------------------------------------------
+# API
+# ---------------------------------------------------------
+
+RewriteRule ^api/v1/?$ api/v1/index.php [L,QSA]
+
+RewriteRule ^api/v1/(user|images|image|deletion|relays|uploads|uploads-verify)/?$ api/v1/$1.php [L,QSA]
+
+# ---------------------------------------------------------
+# Image / page routes
+# ---------------------------------------------------------
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([A-Za-z0-9]{6,16})\.([A-Za-z0-9]{3,5})$ image.php?id=$1 [L,QSA]
+
+RewriteRule ^([A-Za-z0-9]{6,16})$ view.php?id=$1 [L,QSA]
+
+RewriteRule ^a/([A-Za-z0-9-]+)$ album.php?slug=$1 [L,QSA]
+
+RewriteRule ^c/([A-Za-z0-9-]+)$ collection.php?slug=$1 [L,QSA]
+
+RewriteRule ^manage/([A-Za-z0-9]+)$ manage.php?token=$1 [L,QSA]
+
+# ---------------------------------------------------------
+# Authorization header
+# ---------------------------------------------------------
+
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# ---------------------------------------------------------
+# Noindex private/system sections
+# ---------------------------------------------------------
+
+<IfModule mod_headers.c>
+  SetEnvIf Request_URI "^/(?:admin/|ajax/|api/|cron/|account/|manage/|dashboard(?:/|$)|logout(?:/|$))" IMGTR_NOINDEX=1
+  Header always set X-Robots-Tag "noindex, nofollow, noarchive" env=IMGTR_NOINDEX
+</IfModule>
+
+# php -- BEGIN cPanel-generated handler, do not edit
+# Set the “ea-php84” package as the default “PHP” programming language.
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php84 .php .php8 .phtml
+</IfModule>
+# php -- END cPanel-generated handler, do not edit

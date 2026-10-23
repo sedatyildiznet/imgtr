@@ -1,0 +1,15 @@
+<?php
+require_once __DIR__ . '/config.php';
+function base_url(string $path=''): string { return rtrim(SITE_URL,'/').'/'.ltrim($path,'/'); }
+function json_response(array $data, int $status=200): never { if(defined('IMGTR_API_V1')&&IMGTR_API_V1&&function_exists('api_success')){if(($data['success']??false)===true){unset($data['success']);api_success($data,$status);} $message=(string)($data['message']??'The request could not be completed.');$code=(string)($data['code']??match($status){401=>'authentication_required',403=>'forbidden',404=>'not_found',405=>'method_not_allowed',409=>'conflict',419=>'security_token_invalid',422=>'validation_failed',429=>'rate_limit_exceeded',503=>'service_unavailable',default=>'request_failed'});unset($data['success'],$data['message'],$data['code']);api_error($code,$message,$status,$data);} http_response_code($status); header('Content-Type: application/json; charset=utf-8'); header('X-Content-Type-Options: nosniff'); echo json_encode($data,JSON_UNESCAPED_SLASHES); exit; }
+function require_installation(): void { if (!IMGTR_INSTALLED) json_response(['success'=>false,'message'=>'IMGTR configuration is incomplete. Contact the administrator.'],503); }
+function random_id(int $len=6): string { $chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'; $out=''; for($i=0;$i<$len;$i++)$out.=$chars[random_int(0,strlen($chars)-1)]; return $out; }
+function unique_short_id(): string { do {$id=random_id();$s=db()->prepare('SELECT id FROM images WHERE short_id=?');$s->execute([$id]);}while($s->fetch());return $id; }
+function e(?string $v): string { return htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8'); }
+function format_bytes(int $b): string { $u=['B','KB','MB','GB'];$i=0;while($b>=1024&&$i<3){$b/=1024;$i++;}return round($b,1).' '.$u[$i]; }
+function app_log(string $message): void { if(!is_dir(LOG_DIR)) @mkdir(LOG_DIR,0750,true); error_log(gmdate('c').' '.$message."\n",3,LOG_DIR.'/app.log'); }
+function mime_extension(string $mime): ?string { return ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','image/gif'=>'gif'][$mime]??null; }
+function csrf_token(): string { if(empty($_SESSION['csrf']))$_SESSION['csrf']=bin2hex(random_bytes(32));return $_SESSION['csrf']; }
+function verify_csrf(): void { if(!hash_equals($_SESSION['csrf']??'',$_SERVER['HTTP_X_CSRF_TOKEN']??$_POST['csrf']??'')) json_response(['success'=>false,'message'=>'Invalid security token.'],419); }
+function client_ip(): string { return $_SERVER['REMOTE_ADDR']??'0.0.0.0'; }
+function rate_limit(string $scope,int $max): void { $k=hash('sha256',$scope.'|'.client_ip().'|'.gmdate('YmdHi'));$q=db()->prepare('INSERT INTO rate_limits (rate_key,hits,expires_at) VALUES (?,1,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 2 MINUTE)) ON DUPLICATE KEY UPDATE hits=hits+1');$q->execute([$k]);$q=db()->prepare('SELECT hits FROM rate_limits WHERE rate_key=?');$q->execute([$k]);if((int)$q->fetchColumn()>$max)json_response(['success'=>false,'message'=>'Too many requests. Please wait a minute.'],429); }
