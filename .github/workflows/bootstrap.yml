@@ -29,7 +29,7 @@ jobs:
           test -f .github/workflows/deploy.yml
           test ! -e includes/config.php
           rm -rf .bootstrap
-          rm -f .github/workflows/bootstrap.yml
+          rm -f .github/workflows/deploy.yml
           git add -A
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Import sanitized IMGTR application source'
           git push origin HEAD:main
