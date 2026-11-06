@@ -80,7 +80,7 @@ jobs:
           CPANEL_USERNAME: ${{ secrets.CPANEL_USERNAME }}
           CPANEL_API_TOKEN: ${{ secrets.CPANEL_API_TOKEN }}
           CPANEL_DEPLOY_DIR: ${{ vars.CPANEL_DEPLOY_DIR }}
-          GIT_BASE_SHA: ${{ github.event_name == 'push' && github.event.before || '' }}
+          GIT_BASE_SHA: '' # Full source sync prevents skipped commits from leaving production stale.
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true && '1' || '0' }}
         run: |
           test -n "$CPANEL_HOST" && test -n "$CPANEL_USERNAME" && test -n "$CPANEL_API_TOKEN" && test -n "$CPANEL_DEPLOY_DIR" || {
