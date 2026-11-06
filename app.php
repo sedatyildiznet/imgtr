@@ -18,7 +18,7 @@ page_start(t('sharex_page_title'),t('sharex_meta'),['schema'=>['@context'=>'http
           <form method="post" action="/account/integrations/sharex/download"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><button class="button" type="submit"><?=e(t($sharexReady?'sharex_regenerate_config':'sharex_download_config'))?></button></form>
           <a class="button button-secondary" href="/dashboard?tab=integration"><?=e(t('sharex_open_settings'))?></a>
         <?php else:?><a class="button" href="/register"><?=e(t('sharex_create_account'))?></a><?php endif?>
-        <a class="text-button" href="https://getsharex.com/downloads" target="_blank" rel="noopener noreferrer"><?=e(t('sharex_download'))?> ↗</a>
+        <a class="text-button" href="https://github.com/ShareX/ShareX/releases/download/v21.0.0/ShareX-21.0.0-setup-x64.exe" target="_blank" rel="noopener noreferrer"><?=e(t('sharex_download'))?> ↗</a>
       </div>
     </div>
     <aside class="app-instrument"><header><span>SHAREX → IMGTR</span><i class="status-dot"></i></header><div class="app-keystroke"><small><?=e(t('sharex_hotkey'))?></small><strong>PRINT<br>SCREEN</strong></div><div class="app-route"><span>LOCALHOST</span><b>127.0.0.1:43191</b><span>NOSTR / WSS</span></div><footer><span><?=e(t('sharex_origin_files'))?></span><strong>0 B</strong></footer></aside>
@@ -37,7 +37,7 @@ page_start(t('sharex_page_title'),t('sharex_meta'),['schema'=>['@context'=>'http
   <section class="app-capabilities"><header><p class="eyebrow"><?=e(t('sharex_features_label'))?></p><h2><?=e(t('sharex_features_title'))?></h2></header><div><p><?=e(t('sharex_feature_capture'))?></p><p><?=e(t('sharex_feature_edit'))?></p><p><?=e(t('sharex_feature_keys'))?></p><p><?=e(t('sharex_feature_upload'))?></p></div></section>
 
   <section class="app-setup" id="setup"><header><p class="eyebrow"><?=e(t('sharex_setup_label'))?></p><h2><?=e(t('sharex_setup_title'))?></h2></header><div class="app-setup-steps">
-    <article><b><?=e(t('sharex_step_install'))?></b><a href="https://getsharex.com/downloads" target="_blank" rel="noopener noreferrer"><?=e(t('sharex_download'))?> ↗</a></article>
+    <article><b><?=e(t('sharex_step_install'))?></b><a href="https://github.com/ShareX/ShareX/releases/download/v21.0.0/ShareX-21.0.0-setup-x64.exe" target="_blank" rel="noopener noreferrer"><?=e(t('sharex_download'))?> ↗</a></article>
     <article><b><?=e(t('sharex_step_cli'))?></b><a class="button small" href="https://github.com/ShareX/ShareX/releases/download/v21.0.0/ShareX-21.0.0-setup-x64.exe" target="_blank" rel="noopener noreferrer"><?=e(t('sharex_download_setup'))?> ↓</a></article>
     <article><b><?=e(t('sharex_step_bridge'))?></b><code>IMGTR-ShareX-Setup.bat</code></article>
     <article><b><?=e(t('sharex_step_config'))?></b><?php if($appUser):?><form method="post" action="/account/integrations/sharex/download"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><button class="text-button" type="submit"><?=e(t($sharexReady?'sharex_regenerate_config':'sharex_download_config'))?> ↓</button></form><?php else:?><a href="/login"><?=e(t('login'))?> →</a><?php endif?></article>
