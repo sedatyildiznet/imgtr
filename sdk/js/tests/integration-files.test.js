@@ -228,3 +228,19 @@ test('help and policy reading tools remain restrained, responsive and translated
     assert.equal((block[1].match(/=>/g)||[]).length,4,`${language} legal UI key count differs`);
   }
 });
+
+test('image delivery preserves WebSocket frames, caches verified bytes and retries browser failures',async()=>{
+  const websocket=await source('includes/websocket.php'),endpoint=await source('image.php'),viewer=await source('view.php'),script=await source('assets/js/view.js');
+  assert.match(websocket,/function ws_read_http_headers\(/);
+  assert.match(websocket,/fread\(\$stream,1\)/);
+  assert.match(websocket,/function relay_image_cache_read\(/);
+  assert.match(websocket,/function relay_image_cache_store\(/);
+  assert.match(websocket,/microtime\(true\)\+min\(24,max\(8/);
+  assert.match(endpoint,/relay_image_cache_read\(\$image\)/);
+  assert.match(endpoint,/relay_image_cache_store\(\$image,\$binary\)/);
+  assert.match(script,/image\.complete/);
+  assert.match(script,/image\.naturalWidth/);
+  assert.match(script,/_imgtr_retry/);
+  assert.match(script,/retryDelays=\[1500,3000,6000,10000\]/);
+  assert.match(viewer,/view\.js\?v=20261107a/);
+});

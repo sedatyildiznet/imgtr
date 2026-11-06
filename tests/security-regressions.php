@@ -14,3 +14,23 @@ $tampered=$event;$tampered['content']='tampered';must(!nostr_event_id_valid($tam
 $stream=fopen('php://temp','w+');fwrite($stream,chr(0x81).chr(127).pack('NN',0,262145));rewind($stream);
 must(ws_read_frame($stream)===false,'oversized WebSocket frame rejected before allocation');fclose($stream);
 echo "Security regression checks passed.\n";
+
+$handshake=fopen('php://temp','w+b');
+$firstPayload='{"type":"first-frame"}';
+$firstFrame=chr(0x81).chr(strlen($firstPayload)).$firstPayload;
+$headers="HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n";
+fwrite($handshake,$headers.$firstFrame);
+rewind($handshake);
+$receivedHeaders=ws_read_http_headers($handshake);
+must($receivedHeaders===$headers,'WebSocket handshake headers are read without consuming the first frame');
+$receivedFrame=ws_read_frame($handshake);
+must(is_array($receivedFrame)&&$receivedFrame['payload']===$firstPayload,'first WebSocket frame remains readable after handshake');
+fclose($handshake);
+
+$cacheBytes='IMGTR cache regression payload';
+$cacheImage=['sha256'=>hash('sha256',$cacheBytes),'size'=>strlen($cacheBytes)];
+must(relay_image_cache_store($cacheImage,$cacheBytes),'verified image cache write succeeds');
+must(relay_image_cache_read($cacheImage)===$cacheBytes,'verified image cache returns the original bytes');
+$cachePath=relay_image_cache_path($cacheImage['sha256']);
+if($cachePath!==false)@unlink($cachePath);
+
