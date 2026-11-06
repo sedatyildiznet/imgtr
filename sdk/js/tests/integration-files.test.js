@@ -47,14 +47,9 @@ test('personalized ShareX config targets only the loopback bridge',async()=>{
 });
 
 test('public App offers the automatic Windows setup without embedding credentials',async()=>{
-  const page=await source('app.php'),setup=await source('downloads/IMGTR-ShareX-Setup.bat'),dashboard=await source('dashboard.php'),admin=await source('includes/admin-layout.php'),refinement=await source('assets/css/dashboard-refine.css');
-  assert.ok(page.includes('https://github.com/sedatyildiznet/imgtr/releases/download/downloads/IMGTR-ShareX-Setup.bat'),'App must load Windows installer from GitHub');
-  assert.ok(dashboard.includes('https://github.com/sedatyildiznet/imgtr/releases/download/downloads/IMGTR-ShareX-Setup.bat'),'Dashboard must link GitHub-hosted Windows setup');
-  assert.ok(setup.includes('https://github.com/sedatyildiznet/imgtr/releases/download/downloads/imgtr-sdk-1.2.0.tgz'),'Windows installer must install GitHub-hosted SDK');
-  assert.match(setup,/OpenJS\.NodeJS\.LTS/);
-  assert.match(setup,/imgtr\.cmd sharex install/);
-  assert.match(setup,/imgtr-sdk-1\.2\.0\.tgz/);
-  assert.doesNotMatch(setup,/imgtr_[a-f0-9]{48}/i);
+  const page=await source('app.php'),dashboard=await source('dashboard.php'),admin=await source('includes/admin-layout.php'),refinement=await source('assets/css/dashboard-refine.css');
+  assert.ok(page.includes('https://github.com/ShareX/ShareX/releases/download/v21.0.0/ShareX-21.0.0-setup-x64.exe'),'App must link directly to official ShareX x64 installer');
+  assert.ok(dashboard.includes('https://github.com/ShareX/ShareX/releases/download/v21.0.0/ShareX-21.0.0-setup-x64.exe'),'Dashboard must link directly to official ShareX x64 installer');
   assert.match(dashboard,/fa-solid fa-display/);
   assert.match(dashboard,/data-tab="integration"[^>]*>.*?t\('nav_app'\)/s);
   assert.match(dashboard,/integration-workflow/);
@@ -155,8 +150,8 @@ test('site links GitHub open-source repository and offers GitHub-hosted SDK down
   assert.ok(docs.includes('https://github.com/sedatyildiznet/imgtr/releases/download/downloads/imgtr-sdk-1.2.0.tgz'));
   assert.ok(sdkReadme.includes('https://github.com/sedatyildiznet/imgtr/releases/download/downloads/imgtr-sdk-1.2.0.tgz'));
   for(const page of [app,dashboard]){
-    assert.ok(page.includes('https://github.com/sedatyildiznet/imgtr/releases/download/downloads/IMGTR-ShareX-Setup.bat'));
-    assert.ok(!page.includes('href="/downloads/IMGTR-ShareX-Setup.bat"'),'Windows setup must not use origin');
+    assert.ok(page.includes('https://github.com/ShareX/ShareX/releases/download/v21.0.0/ShareX-21.0.0-setup-x64.exe'));
+    assert.ok(!page.includes('https://github.com/sedatyildiznet/imgtr/releases/download/downloads/IMGTR-ShareX-Setup.bat'),'Site must not link to the retired IMGTR installer');
   }
 });
 
