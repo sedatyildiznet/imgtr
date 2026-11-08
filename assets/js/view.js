@@ -58,6 +58,7 @@
       openLightbox();
     }
   });
+  lightboxImage?.addEventListener('click',()=>lightbox?.close());
   lightbox?.querySelector('[data-close-image]')?.addEventListener('click',()=>lightbox.close());
   lightbox?.addEventListener('click',event=>{
     if(event.target===lightbox)lightbox.close();
