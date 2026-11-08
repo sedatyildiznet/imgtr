@@ -242,5 +242,11 @@ test('image delivery preserves WebSocket frames, caches verified bytes and retri
   assert.match(script,/image\.naturalWidth/);
   assert.match(script,/_imgtr_retry/);
   assert.match(script,/retryDelays=\[1500,3000,6000,10000\]/);
-  assert.match(viewer,/view\.js\?v=20261107a/);
+  assert.match(viewer,/view\.js\?v=20261108a/);
+  assert.match(viewer,/id="imageLightbox"/);
+  assert.match(viewer,/aria-controls="imageLightbox"/);
+  assert.match(script,/lightbox\.showModal\(\)/);
+  assert.match(script,/event\.target===lightbox/);
+  const css=await source('assets/css/premium.css');
+  assert.match(css,/\.image-lightbox::backdrop/);
 });
