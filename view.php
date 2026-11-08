@@ -20,7 +20,7 @@ page_start($image['original_filename'],$seoDescription,['canonical_path'=>'/'.$i
 <main class="viewer-shell">
   <section class="viewer-card">
     <div class="viewer-stage">
-      <img id="viewerImage" src="/<?=e($id)?>.<?=e($image['extension'])?>" alt="<?=e($image['original_filename'])?>">
+      <img id="viewerImage" src="/<?=e($id)?>.<?=e($image['extension'])?>" alt="<?=e($image['original_filename'])?>" tabindex="0" role="button" aria-haspopup="dialog" aria-controls="imageLightbox" aria-label="Open image in fullscreen">
       <div id="imageLoading" class="image-loading"><span></span><?=e(t('loading_image'))?></div>
     </div>
     <div class="viewer-content">
@@ -43,6 +43,10 @@ page_start($image['original_filename'],$seoDescription,['canonical_path'=>'/'.$i
     </div>
   </section>
 </main>
+<dialog id="imageLightbox" class="image-lightbox" aria-label="Image preview">
+  <button class="image-lightbox-close" type="button" data-close-image aria-label="Close image">×</button>
+  <img id="lightboxImage" alt="<?=e($image['original_filename'])?>">
+</dialog>
 <dialog id="reportDialog"><form id="reportForm"><button class="dialog-close" type="button" data-close>×</button><h2><?=e(t('report_image'))?></h2><p class="muted"><?=e(t('report_help'))?></p><input type="hidden" name="id" value="<?=e($id)?>"><label><?=e(t('reason'))?><select name="reason" required><option value="spam">Spam</option><option value="malware"><?=e(t('malware'))?></option><option value="copyright"><?=e(t('copyright'))?></option><option value="illegal"><?=e(t('illegal'))?></option><option value="other"><?=e(t('other'))?></option></select></label><label><?=e(t('details'))?><textarea name="details" maxlength="1000" placeholder="<?=e(t('optional_details'))?>"></textarea></label><button class="button" type="submit"><?=e(t('send_report'))?></button></form></dialog>
 <script>window.IMGTR_I18N=<?=json_encode(['copied'=>t('copied'),'copy'=>t('copy'),'done'=>t('done'),'load_error'=>t('load_error'),'try_later'=>t('try_later')],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;</script>
-<?php page_end(['/assets/js/view.js?v=20261107a']);
+<?php page_end(['/assets/js/view.js?v=20261108a']);

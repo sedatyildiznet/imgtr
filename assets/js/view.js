@@ -42,6 +42,31 @@
   image.addEventListener('load',imageLoaded);
   image.addEventListener('error',retryImage);
 
+  const lightbox=document.querySelector('#imageLightbox');
+  const lightboxImage=document.querySelector('#lightboxImage');
+  const openLightbox=()=>{
+    if(!lightbox||!lightboxImage||!image.naturalWidth)return;
+    lightboxImage.src=image.currentSrc||image.src;
+    lightboxImage.alt=image.alt;
+    lightbox.showModal();
+  };
+
+  image.addEventListener('click',openLightbox);
+  image.addEventListener('keydown',event=>{
+    if(event.key==='Enter'||event.key===' '){
+      event.preventDefault();
+      openLightbox();
+    }
+  });
+  lightbox?.querySelector('[data-close-image]')?.addEventListener('click',()=>lightbox.close());
+  lightbox?.addEventListener('click',event=>{
+    if(event.target===lightbox)lightbox.close();
+  });
+  lightbox?.addEventListener('close',()=>{
+    lightboxImage?.removeAttribute('src');
+    image.focus({preventScroll:true});
+  });
+
   // Cached or very fast images can finish before this script attaches listeners.
   if(image.complete){
     if(image.naturalWidth>0)imageLoaded();
