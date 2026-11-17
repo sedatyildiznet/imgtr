@@ -107,7 +107,8 @@ def request(path: str, *, fields: dict[str, str] | None = None, upload: tuple[st
         with urllib.request.urlopen(req, timeout=55, context=CTX) as res:
             obj = json.load(res)
     except urllib.error.HTTPError as exc:
-        raise RuntimeError("cPanel HTTP " + str(exc.code) + " (" + path.split("?")[0] + ")") from None
+        detail = exc.read()[:200].decode("utf-8", "replace").replace("\n", " ")
+        raise RuntimeError("cPanel HTTP " + str(exc.code) + " (" + path.split("?")[0] + "): " + detail) from None
     except (urllib.error.URLError, TimeoutError) as exc:
         raise RuntimeError("cPanel connection failed (" + type(exc).__name__ + ")") from None
     if not isinstance(obj, dict):
