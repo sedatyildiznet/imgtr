@@ -79,7 +79,8 @@ def request(path: str, *, fields: dict[str, str] | None = None, upload: tuple[st
     username = os.environ["CPANEL_USERNAME"].strip()
     token = os.environ["CPANEL_API_TOKEN"].strip()
     headers = {"Authorization": "cpanel " + username + ":" + token,
-               "Accept": "application/json"}
+               "Accept": "application/json",
+               "User-Agent": "imgtr-deploy/1.3.0"}
     if not username or not token:
         raise RuntimeError("Missing cPanel API credentials")
     if upload is not None:
