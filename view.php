@@ -10,6 +10,7 @@ if (!$image) render_image_not_found();
 db()->prepare('UPDATE images SET views = views + 1 WHERE id = ?')->execute([$image['id']]);
 $directUrl = base_url($id.'.'.$image['extension']);
 $viewerUrl = base_url($id);
+$displayName = pathinfo($image['original_filename'], PATHINFO_FILENAME);
 $markdownCode = '![image]('.$directUrl.')';
 $bbcodeCode = '[img]'.$directUrl.'[/img]';
 $htmlCode = '<img src="'.$directUrl.'" alt="image">';
@@ -24,7 +25,7 @@ page_start($image['original_filename'],$seoDescription,['canonical_path'=>'/'.$i
       <div id="imageLoading" class="image-loading"><span></span><?=e(t('loading_image'))?></div>
     </div>
     <div class="viewer-content">
-      <div class="viewer-heading"><div><p class="eyebrow"><?=e(t('shared_image'))?></p><h1><?=e($image['original_filename'])?></h1></div><span class="status-pill"><?=e(t('available'))?></span></div>
+      <div class="viewer-heading"><div><p class="eyebrow"><?=e(t('shared_image'))?></p><h1><?=e($displayName)?></h1></div><span class="status-pill"><?=e(t('available'))?></span></div>
       <div class="image-meta"><span><?=e($image['width'])?> × <?=e($image['height'])?></span><span><?=format_bytes((int)$image['size'])?></span><span><?=number_format((int)$image['views'] + 1)?> <?=e(t('views'))?></span></div>
       <label class="field-label" for="shareUrl"><?=e(t('viewer_link'))?></label>
       <div class="copy-field"><input id="shareUrl" readonly value="<?=e($viewerUrl)?>"><button type="button" data-copy="#shareUrl"><?=e(t('copy'))?></button></div>
