@@ -1,5 +1,7 @@
 import { prepareInput, createEvents, publishEvents } from './upload.js';
 
+const sleep=milliseconds=>new Promise(resolve=>setTimeout(resolve,milliseconds));
+
 export class ImgtrError extends Error {
   constructor(message,{code='request_failed',status=0,requestId=null,details=null}={}){super(message);this.name='ImgtrError';this.code=code;this.status=status;this.requestId=requestId;this.details=details}
 }
@@ -23,14 +25,30 @@ export class ImgtrClient {
   deletionStatus(id){return this.request('/api/v1/deletion',{query:{id}}).then(data=>data.relay_deletion)}
   retryDeletion(id){return this.request('/api/v1/deletion',{method:'POST',query:{id}}).then(data=>data.relay_deletion)}
   relays(){return this.request('/api/v1/relays')}
+  verifyUpload(upload,results){
+    const body={id:upload.id,verification_token:upload.verification_token,relays:results};
+    return this.request('/api/v1/uploads-verify',{method:'POST',body});
+  }
   async upload(input,options={}){
     const prepared=await prepareInput(input,options);options.onProgress?.({phase:'prepare',completed:1,total:1});
     const initiated=await this.request('/api/v1/uploads',{method:'POST',body:{filename:prepared.filename,mime:prepared.mime,size:prepared.size,width:prepared.width,height:prepared.height,sha256:prepared.sha256,chunks:prepared.chunkHashes}});
     const upload=initiated.data??initiated;if(upload.duplicate)return {...upload,replicas:0,distribution:Promise.resolve({replicas:0,total:0})};
     const events=createEvents(upload,prepared),publication=publishEvents(upload,events,progress=>options.onProgress?.({phase:'publish',...progress}));
     const initialResults=await publication.ready;options.onProgress?.({phase:'verify',completed:initialResults.length,total:publication.total});
-    const verified=await this.request('/api/v1/uploads-verify',{method:'POST',body:{id:upload.id,verification_token:upload.verification_token,relays:initialResults}});
-    const distribution=(async()=>{const all=await publication.complete;let replicas=Number(verified.replicas||upload.minimum||0);const successful=all.filter(result=>result.ok);for(let offset=0;offset<successful.length;offset+=2){const checks=await Promise.allSettled(successful.slice(offset,offset+2).map(relay=>this.request('/api/v1/uploads-verify',{method:'POST',body:{id:upload.id,verification_token:upload.verification_token,relays:[relay]}})));for(const check of checks)if(check.status==='fulfilled')replicas=Math.max(replicas,Number(check.value.replicas||0));options.onProgress?.({phase:'verify',completed:Math.min(offset+2,successful.length),total:successful.length})}return {replicas,total:all.length,results:all}})();
+    let verified;
+    try{
+      verified=await this.verifyUpload(upload,initialResults);
+    }catch(error){
+      // Relay verification is eventually consistent: one retry gives slow relays
+      // a second chance instead of failing the whole upload with 422.
+      if(error instanceof ImgtrError&&error.status===422&&error.code==='relay_verification_failed'){
+        await sleep(2000);
+        verified=await this.verifyUpload(upload,initialResults);
+      }else{
+        throw error;
+      }
+    }
+    const distribution=(async()=>{const all=await publication.complete;let replicas=Number(verified.replicas||upload.minimum||0);const successful=all.filter(result=>result.ok);for(let offset=0;offset<successful.length;offset+=2){const checks=await Promise.allSettled(successful.slice(offset,offset+2).map(relay=>this.verifyUpload(upload,[relay])));for(const check of checks)if(check.status==='fulfilled')replicas=Math.max(replicas,Number(check.value.replicas||0));options.onProgress?.({phase:'verify',completed:Math.min(offset+2,successful.length),total:successful.length})}return {replicas,total:all.length,results:all}})();
     if(options.waitForDistribution){const final=await distribution;return {...upload,replicas:final.replicas,distribution:Promise.resolve(final)}}
     return {...upload,replicas:Number(verified.replicas||upload.minimum||0),distribution};
   }

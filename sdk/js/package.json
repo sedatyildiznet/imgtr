@@ -1,6 +1,6 @@
 {
   "name": "@imgtr/sdk",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Official IMGTR JavaScript SDK and command-line client",
   "type": "module",
   "main": "./src/index.js",

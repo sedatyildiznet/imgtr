@@ -28,13 +28,25 @@ try{
     $existing->execute([$user['id'],'IMGTR ShareX']);
     $existingIds=array_map('intval',$existing->fetchAll(PDO::FETCH_COLUMN));
     if($existingIds){
+        // Rotating keys get a 48-hour grace window instead of instant revocation, so
+        // re-downloading the .sxcu never breaks an already-configured ShareX client.
         $marks=implode(',',array_fill(0,count($existingIds),'?'));
-        $pdo->prepare("DELETE FROM api_keys WHERE user_id=? AND id IN ($marks)")->execute(array_merge([$user['id']],$existingIds));
+        if(api_keys_expiry_available()){
+            $pdo->prepare("UPDATE api_keys SET expires_at=UTC_TIMESTAMP() + INTERVAL 48 HOUR WHERE user_id=? AND id IN ($marks) AND (expires_at IS NULL OR expires_at>UTC_TIMESTAMP())")->execute(array_merge([$user['id']],$existingIds));
+            $pdo->prepare("DELETE FROM api_keys WHERE user_id=? AND name='IMGTR ShareX' AND expires_at IS NOT NULL AND expires_at<UTC_TIMESTAMP() - INTERVAL 7 DAY")->execute([$user['id']]);
+        }else{
+            $pdo->prepare("DELETE FROM api_keys WHERE user_id=? AND id IN ($marks)")->execute(array_merge([$user['id']],$existingIds));
+        }
     }
-    $count=$pdo->prepare('SELECT COUNT(*) FROM api_keys WHERE user_id=?');$count->execute([$user['id']]);
+    $expiryFilter=api_keys_expiry_available()?' AND (expires_at IS NULL OR expires_at>UTC_TIMESTAMP())':'';
+    $count=$pdo->prepare('SELECT COUNT(*) FROM api_keys WHERE user_id=?'.$expiryFilter);$count->execute([$user['id']]);
     if((int)$count->fetchColumn()>=10)throw new RuntimeException(t('sharex_key_limit'));
     $key='imgtr_'.bin2hex(random_bytes(24));
-    $pdo->prepare('INSERT INTO api_keys(user_id,name,key_hash) VALUES(?,?,?)')->execute([$user['id'],'IMGTR ShareX',hash('sha256',$key)]);
+    if(api_keys_expiry_available()){
+        $pdo->prepare('INSERT INTO api_keys(user_id,name,key_hash,expires_at) VALUES(?,?,?,UTC_TIMESTAMP() + INTERVAL 48 HOUR)')->execute([$user['id'],'IMGTR ShareX',hash('sha256',$key)]);
+    }else{
+        $pdo->prepare('INSERT INTO api_keys(user_id,name,key_hash) VALUES(?,?,?)')->execute([$user['id'],'IMGTR ShareX',hash('sha256',$key)]);
+    }
     $pdo->commit();
 }catch(Throwable $error){
     if($pdo->inTransaction())$pdo->rollBack();

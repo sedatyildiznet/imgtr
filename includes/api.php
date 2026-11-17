@@ -58,7 +58,8 @@ function api_require_key(): array {
         api_error('authentication_required','Use an IMGTR API key in the Bearer authorization header.',401);
     }
     $hash=hash('sha256',$match[1]);
-    $query=db()->prepare('SELECT u.*,k.id api_key_id FROM api_keys k JOIN users u ON u.id=k.user_id WHERE k.key_hash=? AND u.status="active" LIMIT 1');
+    $expiry=api_keys_expiry_available()?' AND (k.expires_at IS NULL OR k.expires_at>UTC_TIMESTAMP())':'';
+    $query=db()->prepare('SELECT u.*,k.id api_key_id FROM api_keys k JOIN users u ON u.id=k.user_id WHERE k.key_hash=? AND u.status="active"'.$expiry.' LIMIT 1');
     $query->execute([$hash]); $user=$query->fetch();
     if(!$user){header('WWW-Authenticate: Bearer realm="IMGTR API", error="invalid_token"');api_error('invalid_api_key','The supplied API key is invalid or has been revoked.',401);}
     if($ban=active_user_ban((int)$user['id']))api_error('account_restricted','This account is restricted.',403,['reason'=>$ban['reason'],'expires_at'=>$ban['expires_at']]);

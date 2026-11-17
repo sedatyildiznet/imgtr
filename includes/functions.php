@@ -13,3 +13,9 @@ function csrf_token(): string { if(empty($_SESSION['csrf']))$_SESSION['csrf']=bi
 function verify_csrf(): void { if(defined('IMGTR_API_V1')&&IMGTR_API_V1&&defined('IMGTR_API_AUTH_USER'))return; if(!hash_equals($_SESSION['csrf']??'',$_SERVER['HTTP_X_CSRF_TOKEN']??$_POST['csrf']??'')) json_response(['success'=>false,'message'=>'Invalid security token.'],419); }
 function client_ip(): string { return $_SERVER['REMOTE_ADDR']??'0.0.0.0'; }
 function rate_limit(string $scope,int $max,bool $perIp=true): void { $k=hash('sha256',$scope.'|'.($perIp?client_ip():'account').'|'.gmdate('YmdHi'));$q=db()->prepare('INSERT INTO rate_limits (rate_key,hits,expires_at) VALUES (?,1,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 2 MINUTE)) ON DUPLICATE KEY UPDATE hits=hits+1');$q->execute([$k]);$q=db()->prepare('SELECT hits FROM rate_limits WHERE rate_key=?');$q->execute([$k]);if((int)$q->fetchColumn()>$max)json_response(['success'=>false,'message'=>'Too many requests. Please wait a minute.'],429); }
+function api_keys_expiry_available(): bool {
+    static $available=null;
+    if($available!==null)return $available;
+    try{$available=(bool)db()->query('SHOW COLUMNS FROM api_keys LIKE "expires_at"')->fetchColumn();}catch(Throwable){$available=false;}
+    return $available;
+}

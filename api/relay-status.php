@@ -3,6 +3,7 @@ require_once __DIR__.'/../includes/auth.php';
 require_once __DIR__.'/../includes/websocket.php';
 require_once __DIR__.'/../includes/deletion.php';
 secure_session();
+set_time_limit(0);
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['success'=>false],405);
 verify_csrf();
 rate_limit('relay-verify-ip',90);

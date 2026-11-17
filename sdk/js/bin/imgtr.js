@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { access, readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
+import { appendFileSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { ImgtrClient, ImgtrError } from '../src/index.js';
 import { createSharexBridge } from '../src/sharex-bridge.js';
-import { installSharexStartup, readSharexState, removeSharexState, sharexHealth, sharexServicePaths, startSharexBackground, stopSharexBackground, uninstallSharexStartup, writeSharexState } from '../src/sharex-service.js';
+import { installSharexStartup, readSharexState, removeSharexState, sharexHealth, sharexLogPath, sharexServicePaths, startSharexBackground, stopSharexBackground, uninstallSharexStartup, writeSharexState } from '../src/sharex-service.js';
 
 const configPath=process.env.IMGTR_CONFIG||join(homedir(),'.config','imgtr','config.json');
 const cliPath=fileURLToPath(import.meta.url);
@@ -38,6 +39,13 @@ Usage:
 
 Environment: IMGTR_API_KEY, IMGTR_BASE_URL, IMGTR_CONFIG`)}
 async function saveConfig(next){await mkdir(dirname(configPath),{recursive:true});await writeFile(configPath,JSON.stringify(next,null,2)+'\n',{mode:0o600})}
+function bridgeLog(message){
+  try{
+    const logPath=sharexLogPath();
+    mkdirSync(dirname(logPath),{recursive:true});
+    appendFileSync(logPath,`[${new Date().toISOString()}] ${message}\n`);
+  }catch{}
+}
 async function run(){
   const [command,...rest]=args;if(!command||command==='help'||command==='--help'||command==='-h'){help();return}
   if(command==='config'){
@@ -55,12 +63,17 @@ async function run(){
     if(action==='install'){const result=await installSharexStartup({port,scriptPath:cliPath});print(jsonFlag?result:`IMGTR ShareX background integration installed.\nStartup: ${result.startup}\nBridge: http://127.0.0.1:${port}/upload`);return}
     if(action==='start'){const result=await startSharexBackground({port,scriptPath:cliPath});print(jsonFlag?result:result.alreadyRunning?'IMGTR ShareX bridge is already running.':`IMGTR ShareX bridge started in the background on port ${port}.`);return}
     if(action==='stop'){const state=await readSharexState(),result=await stopSharexBackground({port:state?.port});print(jsonFlag?result:result.wasRunning?'IMGTR ShareX bridge stopped.':'IMGTR ShareX bridge is not running.');return}
-    if(action==='status'){const state=await readSharexState(),activePort=state?.port||port,health=await sharexHealth({port:activePort}),startup=sharexServicePaths().startup,installed=Boolean(startup&&await access(startup).then(()=>true,()=>false));const result={installed,running:Boolean(health),port:activePort,pid:health?.pid||null,started_at:state?.started_at||null};print(jsonFlag?result:`IMGTR ShareX\nInstalled: ${installed?'yes':'no'}\nRunning: ${health?'yes':'no'}\nPort: ${activePort}${health?.pid?`\nPID: ${health.pid}`:''}`);return}
+    if(action==='status'){const state=await readSharexState(),activePort=state?.port||port,health=await sharexHealth({port:activePort}),startup=sharexServicePaths().startup,installed=Boolean(startup&&await access(startup).then(()=>true,()=>false));const result={installed,running:Boolean(health),port:activePort,pid:health?.pid||null,started_at:state?.started_at||null,log:sharexLogPath()};print(jsonFlag?result:`IMGTR ShareX\nInstalled: ${installed?'yes':'no'}\nRunning: ${health?'yes':'no'}\nPort: ${activePort}${health?.pid?`\nPID: ${health.pid}`:''}\nLog: ${sharexLogPath()}`);return}
     if(action==='uninstall'){const result=await uninstallSharexStartup();print(jsonFlag?result:'IMGTR ShareX background integration removed.');return}
     if(action!=='serve')throw new Error('Usage: imgtr sharex <install|start|stop|status|uninstall|serve>');
+    const background=args.includes('--background');
+    if(background){
+      process.on('uncaughtException',error=>{bridgeLog(`uncaught exception: ${error?.stack||error?.message||error}`)});
+      process.on('unhandledRejection',reason=>{bridgeLog(`unhandled rejection: ${reason?.stack||reason?.message||reason}`)});
+    }
     const bridge=createSharexBridge({port,upload:async({apiKey:requestKey,buffer,filename,mime})=>new ImgtrClient({apiKey:requestKey,baseUrl}).upload(buffer,{filename,mime,waitForDistribution:false})});
-    await bridge.listen();await writeSharexState({pid:process.pid,port,started_at:new Date().toISOString(),background:args.includes('--background')});if(!args.includes('--background')){process.stdout.write(`IMGTR ShareX bridge listening on http://127.0.0.1:${port}/upload\n`);process.stdout.write('Press Ctrl+C to stop. Use "imgtr sharex install" for invisible automatic startup.\n')}
-    const stop=async()=>{try{await bridge.close()}finally{const state=await readSharexState();if(state?.pid===process.pid)await removeSharexState();process.exit(0)}};process.once('SIGINT',stop);process.once('SIGTERM',stop);return
+    await bridge.listen();await writeSharexState({pid:process.pid,port,started_at:new Date().toISOString(),background});if(background){bridgeLog(`bridge listening on 127.0.0.1:${port} (pid ${process.pid})`)}else{process.stdout.write(`IMGTR ShareX bridge listening on http://127.0.0.1:${port}/upload\n`);process.stdout.write('Press Ctrl+C to stop. Use "imgtr sharex install" for invisible automatic startup.\n')}
+    const stop=async()=>{try{await bridge.close()}finally{bridgeLog('bridge stopping');const state=await readSharexState();if(state?.pid===process.pid)await removeSharexState();process.exit(0)}};process.once('SIGINT',stop);process.once('SIGTERM',stop);return
   }
   if(!apiKey)throw new Error('No API key. Run: imgtr config set-key <key>');const client=new ImgtrClient({apiKey,baseUrl});
   if(command==='upload'){

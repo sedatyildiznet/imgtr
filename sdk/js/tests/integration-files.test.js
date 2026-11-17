@@ -147,8 +147,8 @@ test('album refinement translations have identical keys in every language',async
 test('site links GitHub open-source repository and offers GitHub-hosted SDK downloads',async()=>{
   const footer=await source('includes/layout.php'),docs=await source('api-docs.php'),sdkReadme=await source('sdk/js/README.md'),app=await source('app.php'),dashboard=await source('dashboard.php');
   assert.match(footer,/href="https:\/\/github\.com\/sedatyildiznet\/imgtr"/);
-  assert.ok(docs.includes('https://github.com/sedatyildiznet/imgtr/releases/download/downloads/imgtr-sdk-1.2.0.tgz'));
-  assert.ok(sdkReadme.includes('https://github.com/sedatyildiznet/imgtr/releases/download/downloads/imgtr-sdk-1.2.0.tgz'));
+  assert.ok(docs.includes('https://github.com/sedatyildiznet/imgtr/releases/download/downloads/imgtr-sdk-1.3.0.tgz'));
+  assert.ok(sdkReadme.includes('https://github.com/sedatyildiznet/imgtr/releases/download/downloads/imgtr-sdk-1.3.0.tgz'));
   for(const page of [app,dashboard]){
     assert.ok(page.includes('https://github.com/ShareX/ShareX/releases/download/v21.0.0/ShareX-21.0.0-setup-x64.exe'));
     assert.ok(!page.includes('https://github.com/sedatyildiznet/imgtr/releases/download/downloads/IMGTR-ShareX-Setup.bat'),'Site must not link to the retired IMGTR installer');

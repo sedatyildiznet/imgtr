@@ -5,8 +5,8 @@ The SDK processes the image locally, removes metadata from JPG/PNG/WEBP by decod
 ## Install
 
 ```bash
-npm install https://github.com/sedatyildiznet/imgtr/releases/download/downloads/imgtr-sdk-1.2.0.tgz
-npm install -g https://github.com/sedatyildiznet/imgtr/releases/download/downloads/imgtr-sdk-1.2.0.tgz
+npm install https://github.com/sedatyildiznet/imgtr/releases/download/downloads/imgtr-sdk-1.3.0.tgz
+npm install -g https://github.com/sedatyildiznet/imgtr/releases/download/downloads/imgtr-sdk-1.3.0.tgz
 imgtr config set-key imgtr_your_key
 ```
 
@@ -65,3 +65,7 @@ imgtr sharex uninstall
 ```
 
 `stop` ends the current bridge process while keeping automatic startup installed. `uninstall` stops the bridge and removes the Startup launcher. `imgtr sharex serve` remains available for foreground diagnostics.
+
+## Diagnostics
+
+The background bridge writes its startup, crash and upload-error output to `%LOCALAPPDATA%\IMGTR\bridge.log` (rotated at 1 MB) and honours the `IMGTR_SHAREX_LOG` environment variable. If ShareX uploads stop working, run `imgtr sharex status`, inspect that log, then restart the bridge with `imgtr sharex stop` and `imgtr sharex start`.

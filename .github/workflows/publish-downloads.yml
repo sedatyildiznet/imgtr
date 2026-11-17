@@ -6,7 +6,7 @@ on:
     paths:
       - '.github/workflows/publish-downloads.yml'
       - 'downloads/IMGTR-ShareX-Setup.bat'
-      - 'sdk/js/imgtr-sdk-1.2.0.tgz'
+      - 'sdk/js/imgtr-sdk-1.3.0.tgz'
   workflow_dispatch:
 
 permissions:
@@ -29,8 +29,8 @@ jobs:
         run: |
           set -euo pipefail
           test -s downloads/IMGTR-ShareX-Setup.bat
-          test -s sdk/js/imgtr-sdk-1.2.0.tgz
-          tar -tzf sdk/js/imgtr-sdk-1.2.0.tgz > /dev/null
+          test -s sdk/js/imgtr-sdk-1.3.0.tgz
+          tar -tzf sdk/js/imgtr-sdk-1.3.0.tgz > /dev/null
           grep -q 'imgtr.cmd sharex install' downloads/IMGTR-ShareX-Setup.bat
       - name: Create or update stable GitHub Releases downloads
         env:
@@ -40,7 +40,7 @@ jobs:
           set -euo pipefail
           tag=downloads
           bat='downloads/IMGTR-ShareX-Setup.bat'
-          sdk='sdk/js/imgtr-sdk-1.2.0.tgz'
+          sdk='sdk/js/imgtr-sdk-1.3.0.tgz'
           if gh release view "$tag" --repo "$GH_REPO" > /dev/null 2>&1; then
             gh release upload "$tag" "$bat" "$sdk" --clobber --repo "$GH_REPO"
           else
@@ -52,6 +52,13 @@ jobs:
               --latest=false
           fi
           gh release view "$tag" --json assets --jq '.assets[].name' --repo "$GH_REPO" | sort > /tmp/actual-assets
-          printf '%s\n' 'IMGTR-ShareX-Setup.bat' 'imgtr-sdk-1.2.0.tgz' > /tmp/expected-assets
-          diff -u /tmp/expected-assets /tmp/actual-assets
+          while read -r asset; do
+            case "$asset" in
+              IMGTR-ShareX-Setup.bat|imgtr-sdk-1.3.0.tgz) ;;
+              *) gh release delete-asset "$tag" "$asset" --yes --repo "$GH_REPO" ;;
+            esac
+          done < /tmp/actual-assets
+          gh release view "$tag" --json assets --jq '.assets[].name' --repo "$GH_REPO" | sort > /tmp/final-assets
+          printf '%s\n' 'IMGTR-ShareX-Setup.bat' 'imgtr-sdk-1.3.0.tgz' > /tmp/expected-assets
+          diff -u /tmp/expected-assets /tmp/final-assets
           echo 'Release assets published and verified.'

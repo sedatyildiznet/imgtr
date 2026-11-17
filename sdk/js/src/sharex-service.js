@@ -1,10 +1,11 @@
 import { spawn } from 'node:child_process';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, open as openHandle, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import process from 'node:process';
 
 const STARTUP_NAME='IMGTR ShareX Bridge.vbs';
+const LOG_MAX_BYTES=1024*1024;
 const sleep=milliseconds=>new Promise(resolve=>setTimeout(resolve,milliseconds));
 
 export function sharexServicePaths(env=process.env){
@@ -13,9 +14,24 @@ export function sharexServicePaths(env=process.env){
   return {state:join(dataRoot,'IMGTR','sharex-bridge.json'),startup:startupRoot?join(startupRoot,STARTUP_NAME):null};
 }
 
-export function createStartupLauncher({nodePath,scriptPath,port=43191}){
-  const command=`"${nodePath}" "${scriptPath}" sharex serve --port ${port} --background`;
-  return `Set IMGTRShell = CreateObject("WScript.Shell")\r\nIMGTRShell.Run "${command.replaceAll('"','""')}", 0, False\r\n`;
+export function sharexLogPath(paths=sharexServicePaths(),env=process.env){
+  return env.IMGTR_SHAREX_LOG||join(dirname(paths.state),'bridge.log');
+}
+
+export async function openSharexLog(paths=sharexServicePaths(),env=process.env){
+  const path=sharexLogPath(paths,env);
+  await mkdir(dirname(path),{recursive:true});
+  try{const info=await stat(path);if(info.size>LOG_MAX_BYTES)await writeFile(path,'')}catch{}
+  const handle=await openHandle(path,'a');
+  return {handle,path};
+}
+
+export async function appendSharexLog(message,paths=sharexServicePaths(),env=process.env){
+  try{
+    const path=sharexLogPath(paths,env);
+    await mkdir(dirname(path),{recursive:true});
+    await appendFile(path,`[${new Date().toISOString()}] ${message}\n`);
+  }catch{}
 }
 
 export async function readSharexState(paths=sharexServicePaths()){
@@ -29,6 +45,11 @@ export async function writeSharexState(state,paths=sharexServicePaths()){
 
 export async function removeSharexState(paths=sharexServicePaths()){await rm(paths.state,{force:true})}
 
+export function createStartupLauncher({nodePath,scriptPath,port=43191}){
+  const command=`"${nodePath}" "${scriptPath}" sharex serve --port ${port} --background`;
+  return `Set IMGTRShell = CreateObject("WScript.Shell")\r\nIMGTRShell.Run "${command.replaceAll('"','""')}", 0, False\r\n`;
+}
+
 export async function sharexHealth({port=43191,fetchImpl=globalThis.fetch}={}){
   try{const response=await fetchImpl(`http://127.0.0.1:${port}/health`,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(900)});const payload=await response.json();return response.ok&&payload?.data?.service==='imgtr-sharex-bridge'?payload.data:null}catch{return null}
 }
@@ -38,13 +59,26 @@ async function waitForHealth(port,expected=true,attempts=24){
   return null;
 }
 
-export async function startSharexBackground({port=43191,nodePath=process.execPath,scriptPath}={}){
+export async function startSharexBackground({port=43191,nodePath=process.execPath,scriptPath,paths=sharexServicePaths()}={}){
   if(process.platform!=='win32')throw new Error('Background ShareX integration is currently supported on Windows only.');
   const running=await sharexHealth({port});if(running)return {alreadyRunning:true,...running};
   if(!scriptPath)throw new Error('The IMGTR CLI script path is required.');
-  const child=spawn(nodePath,[scriptPath,'sharex','serve','--port',String(port),'--background'],{detached:true,windowsHide:true,stdio:'ignore',env:{...process.env,IMGTR_SHAREX_BACKGROUND:'1'}});
-  child.once('error',()=>{});child.unref();
-  const health=await waitForHealth(port,true);if(!health)throw new Error('The IMGTR ShareX bridge could not start. Reinstall the SDK and allow the sharp install script if npm reported it as blocked.');
+  const log=await openSharexLog(paths);
+  let child;
+  try{
+    child=spawn(nodePath,[scriptPath,'sharex','serve','--port',String(port),'--background'],{detached:true,windowsHide:true,stdio:['ignore',log.handle.fd,log.handle.fd],env:{...process.env,IMGTR_SHAREX_BACKGROUND:'1',IMGTR_SHAREX_LOG:log.path}});
+  }catch(error){
+    await log.handle.close().catch(()=>{});
+    throw error;
+  }
+  child.once('error',error=>{appendSharexLog(`bridge spawn error: ${error.message}`,paths)});
+  child.unref();
+  await log.handle.close().catch(()=>{});
+  const health=await waitForHealth(port,true);
+  if(!health){
+    await appendSharexLog(`bridge did not become healthy on port ${port}; see the lines above for the bridge output`,paths);
+    throw new Error(`The IMGTR ShareX bridge could not start. Check the bridge log at ${log.path}, then reinstall the SDK and allow the sharp install script if npm reported it as blocked.`);
+  }
   return {alreadyRunning:false,...health};
 }
 
@@ -61,7 +95,7 @@ export async function installSharexStartup({port=43191,nodePath=process.execPath
   if(!scriptPath)throw new Error('The IMGTR CLI script path is required.');
   await mkdir(dirname(paths.startup),{recursive:true});
   await writeFile(paths.startup,createStartupLauncher({nodePath,scriptPath,port}),'utf8');
-  const result=start?await startSharexBackground({port,nodePath,scriptPath}):null;
+  const result=start?await startSharexBackground({port,nodePath,scriptPath,paths}):null;
   return {startup:paths.startup,port,running:Boolean(result),alreadyRunning:Boolean(result?.alreadyRunning)};
 }
 
